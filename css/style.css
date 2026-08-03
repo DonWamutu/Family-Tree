@@ -1,0 +1,495 @@
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --white:      #ffffff;
+  --ink:        #1b1613;
+  --ink-soft:   #524a45;
+  --gold:       #b0863f;
+  --gold-deep:  #8c6a2f;
+  --gold-tint:  #f3ead4;
+  --purple:     #3f2142;
+  --purple-tint:#f6f1f6;
+  --line:       #e6e0d8;
+  --danger:     #8a3b3b;
+
+  --font-display: 'Cormorant Garamond', serif;
+  --font-body:    'EB Garamond', serif;
+
+  --radius: 2px;
+}
+
+*{ box-sizing: border-box; }
+
+/* Always respect the native "hidden" attribute, no matter what other
+   classes are also applied to the element. */
+[hidden]{ display: none !important; }
+
+html{ scroll-behavior: smooth; }
+
+body{
+  margin: 0;
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 18px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+img{ max-width: 100%; display:block; }
+
+button{ font-family: inherit; }
+
+:focus-visible{
+  outline: 2px solid var(--purple);
+  outline-offset: 3px;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.site-header{
+  text-align: center;
+  padding: 4.5rem 1.5rem 3rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow{
+  margin: 0 0 .9rem;
+  font-family: var(--font-body);
+  font-size: .72rem;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.site-title{
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  letter-spacing: .01em;
+  color: var(--ink);
+}
+
+.site-title[contenteditable="true"],
+.site-subtitle[contenteditable="true"]{
+  cursor: text;
+  border-bottom: 1px dashed var(--gold);
+  padding-bottom: 2px;
+}
+
+.site-subtitle{
+  margin: .6rem 0 0;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+}
+
+.toolbar{
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
+.toolbar-edit-only{
+  display: flex;
+  gap: .6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn{
+  font-family: var(--font-body);
+  font-size: .85rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: var(--white);
+  border: 1px solid var(--ink);
+  padding: .65rem 1.4rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease, opacity .15s ease;
+}
+
+.btn:hover{ opacity: .82; }
+
+.btn-ghost{
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+}
+
+.btn-ghost.small{
+  font-size: .72rem;
+  padding: .5rem 1rem;
+  color: var(--purple);
+  border-color: var(--purple);
+}
+
+.btn-ghost.danger{
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn.is-active{
+  background: var(--purple);
+  border-color: var(--purple);
+  color: var(--white);
+}
+
+/* ============================================================
+   TREE LAYOUT
+   ============================================================ */
+.tree-root{
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 3.5rem 1.5rem 5rem;
+}
+
+.generation-label{
+  text-align: center;
+  font-size: .72rem;
+  letter-spacing: .32em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin: 0 0 1.6rem;
+}
+
+.generation-label::before,
+.generation-label::after{
+  content: "";
+  display: inline-block;
+  width: 34px;
+  height: 1px;
+  background: var(--gold);
+  vertical-align: middle;
+  margin: 0 .8em;
+}
+
+/* --- Grandparents --- */
+.grandparents-section{
+  margin-bottom: 3.2rem;
+}
+
+.grandparents-row{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+  flex-wrap: wrap;
+}
+
+.union-mark{
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 2rem;
+  color: var(--gold);
+}
+
+/* --- Spine connecting grandparents down to the children level --- */
+.spine{
+  width: 1px;
+  height: 42px;
+  background: var(--gold);
+  margin: 1.6rem auto 0;
+}
+
+/* --- Level sections (Children / Grandchildren) --- */
+.level-section{
+  margin-bottom: 3.4rem;
+}
+
+.level-section + .level-section{
+  padding-top: 3rem;
+  border-top: 1px solid var(--gold);
+}
+
+/* Level 2: children, one clean row */
+.children-level{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2.2rem 1.8rem;
+}
+
+.child-cell{
+  width: 150px;
+}
+
+/* Level 3: grandchildren, grouped into clusters so it's clear whose
+   child each one is, while still all sitting on one tier */
+.grandchildren-level{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2.4rem 3rem;
+}
+
+.gc-cluster{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
+  max-width: 260px;
+  padding: 0 .4rem;
+}
+
+.gc-cluster-label{
+  margin: 0 0 1rem;
+  font-size: .68rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--purple);
+  opacity: .8;
+  text-align: center;
+}
+
+.gc-cluster-row{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.1rem 1rem;
+}
+
+/* ============================================================
+   PERSON CARD
+   ============================================================ */
+.person{
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.portrait-wrap{
+  position: relative;
+  border-radius: 50%;
+}
+
+.portrait{
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--purple-tint);
+  border: 1px solid var(--line);
+  transition: box-shadow .2s ease, transform .2s ease;
+  cursor: zoom-in;
+}
+
+.person--primary .portrait{ width: 128px; height: 128px; }
+.person--child .portrait{ width: 96px; height: 96px; }
+.person--grandchild .portrait{ width: 60px; height: 60px; }
+
+.portrait:hover{
+  box-shadow: 0 0 0 4px var(--gold-tint);
+}
+
+.portrait-initials{
+  border-radius: 50%;
+  background: var(--purple-tint);
+  color: var(--purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  border: 1px solid var(--line);
+  cursor: zoom-in;
+}
+
+.person--primary .portrait-initials{ width: 128px; height: 128px; font-size: 2.4rem; }
+.person--child .portrait-initials{ width: 96px; height: 96px; font-size: 1.8rem; }
+.person--grandchild .portrait-initials{ width: 60px; height: 60px; font-size: 1.15rem; }
+
+.person-name{
+  margin-top: .7rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.person--primary .person-name{ font-size: 1.35rem; }
+.person--child .person-name{ font-size: 1.15rem; }
+.person--grandchild .person-name{ font-size: .92rem; margin-top: .5rem; }
+
+.person-name[contenteditable="true"]{
+  cursor: text;
+  border-bottom: 1px dashed var(--gold);
+  padding: 0 2px 1px;
+}
+
+/* Edit-mode overlay hints on portraits */
+body.edit-mode .portrait,
+body.edit-mode .portrait-initials{
+  cursor: pointer;
+}
+
+.edit-mode-tag{
+  display: none;
+  margin-top: .35rem;
+  font-size: .62rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--purple);
+}
+
+body.edit-mode .edit-mode-tag{ display: inline-block; }
+
+/* Remove-person button, edit-mode only */
+.remove-btn{
+  display: none;
+  margin-top: .4rem;
+  font-size: .62rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--danger);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+body.edit-mode .remove-btn{ display: inline-block; }
+
+.add-person-btn{
+  display: none;
+  align-self: center;
+  margin-top: .6rem;
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--purple);
+  background: var(--purple-tint);
+  border: 1px solid var(--purple);
+  padding: .35rem .7rem;
+  cursor: pointer;
+}
+
+body.edit-mode .add-person-btn{ display: inline-block; }
+
+.add-child-branch{
+  display: none;
+  justify-content: center;
+  margin-top: 2.6rem;
+}
+
+body.edit-mode .add-child-branch{ display: flex; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.site-footer{
+  text-align: center;
+  padding: 3rem 1.5rem 4rem;
+  color: var(--ink-soft);
+  font-size: .9rem;
+  border-top: 1px solid var(--line);
+}
+
+.flourish{
+  font-family: var(--font-display);
+  color: var(--gold);
+  font-size: 1.4rem;
+  margin-bottom: .6rem;
+}
+
+.admin-link{
+  display: inline-block;
+  margin-top: 1.6rem;
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-family: var(--font-body);
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .55;
+  cursor: pointer;
+  padding: .4rem;
+}
+
+.admin-link:hover{ opacity: 1; color: var(--purple); }
+
+#admin-toolbar{ margin-top: 2rem; }
+
+/* ============================================================
+   LIGHTBOX
+   ============================================================ */
+.lightbox{
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 22, 19, .92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 100;
+}
+
+.lightbox-figure{
+  margin: 0;
+  max-width: min(90vw, 640px);
+  text-align: center;
+}
+
+.lightbox-figure img{
+  max-height: 76vh;
+  margin: 0 auto;
+  border: 1px solid rgba(255,255,255,.2);
+}
+
+.lightbox-figure figcaption{
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  color: var(--white);
+}
+
+.lightbox-close{
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 2.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px){
+  .site-header{ padding: 3rem 1.2rem 2.2rem; }
+  .tree-root{ padding: 2.4rem 1rem 3.5rem; }
+
+  .children-level,
+  .grandchildren-level{
+    gap: 1.8rem;
+  }
+
+  .child-cell{ width: 130px; }
+
+  .gc-cluster{
+    width: 100%;
+    max-width: none;
+    padding: 1.2rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .gc-cluster:first-child{ border-top: none; padding-top: 0; }
+
+  .person--primary .portrait,
+  .person--primary .portrait-initials{ width: 108px; height: 108px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ transition: none !important; scroll-behavior: auto !important; }
+}
