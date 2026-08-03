@@ -377,6 +377,33 @@ editToggle.addEventListener("click", () => {
 });
 
 /* ============================================================
+   DOWNLOAD data.js (ready to drop straight into GitHub)
+   ============================================================ */
+document.getElementById("download-datajs-btn").addEventListener("click", () => {
+  const fileContent = `/* ============================================================
+   DEFAULT FAMILY DATA
+   ------------------------------------------------------------
+   Generated from the live site's Edit Tree mode via "Download
+   data.js". To make these changes visible to every visitor:
+
+   1. Go to your GitHub repository.
+   2. Open the "js" folder, then click "Add file" -> "Upload files".
+   3. Drag this data.js file in (it will replace the existing one).
+   4. Commit the change. Vercel will redeploy automatically.
+   ============================================================ */
+
+const DEFAULT_DATA = ${JSON.stringify(data, null, 2)};
+`;
+  const blob = new Blob([fileContent], { type: "text/javascript" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "data.js";
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ============================================================
    EXPORT / IMPORT / RESET
    ============================================================ */
 document.getElementById("export-btn").addEventListener("click", () => {

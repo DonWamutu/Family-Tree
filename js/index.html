@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Family Tree</title>
+<meta name="description" content="Our family tree — generations, together.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <p class="eyebrow">Est. Family Lineage</p>
+  <h1 class="site-title" id="site-title" contenteditable="false" spellcheck="false">The Family Tree</h1>
+  <p class="site-subtitle" id="site-subtitle" contenteditable="false" spellcheck="false">Four generations, one root.</p>
+
+  <div class="toolbar" id="admin-toolbar" hidden>
+    <button id="edit-toggle" class="btn btn-ghost">Edit Tree</button>
+    <div class="toolbar-edit-only" id="edit-actions" hidden>
+      <button id="download-datajs-btn" class="btn btn-ghost small">Download data.js</button>
+      <button id="export-btn" class="btn btn-ghost small">Export Data</button>
+      <button id="import-btn" class="btn btn-ghost small">Import Data</button>
+      <button id="reset-btn" class="btn btn-ghost small danger">Reset</button>
+      <input type="file" id="import-file" accept="application/json" hidden>
+    </div>
+  </div>
+</header>
+
+<main id="tree-root" class="tree-root">
+  <!-- Rendered by js/app.js -->
+</main>
+
+<footer class="site-footer">
+  <div class="flourish" aria-hidden="true">&#9670;</div>
+  <p>Click any portrait to view it in full size.</p>
+  <button id="admin-link" class="admin-link">Site Admin</button>
+</footer>
+
+<!-- Lightbox -->
+<div id="lightbox" class="lightbox" hidden>
+  <button id="lightbox-close" class="lightbox-close" aria-label="Close">&times;</button>
+  <figure class="lightbox-figure">
+    <img id="lightbox-img" src="" alt="">
+    <figcaption id="lightbox-caption"></figcaption>
+  </figure>
+</div>
+
+<!-- Hidden file input reused for photo uploads -->
+<input type="file" id="photo-file" accept="image/*" hidden>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
