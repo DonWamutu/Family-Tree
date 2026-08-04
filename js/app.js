@@ -27,7 +27,7 @@ function loadMeta() {
     const raw = localStorage.getItem(META_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { /* ignore */ }
-  return { title: "The Family Tree", subtitle: "Four generations, one root." };
+  return { title: "John Wamutu (Kahungura) Family Tree", subtitle: "Family" };
 }
 
 function saveData() {
