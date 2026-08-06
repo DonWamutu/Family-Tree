@@ -16,8 +16,8 @@
 
 <header class="site-header">
   <p class="eyebrow">Est. Family Lineage</p>
-  <h1 class="site-title" id="site-title" contenteditable="false" spellcheck="false">John Wamutu (Kahungura) Family Tree</h1>
-  <p class="site-subtitle" id="site-subtitle" contenteditable="false" spellcheck="false">Family.</p>
+  <h1 class="site-title" id="site-title" contenteditable="false" spellcheck="false">The Family Tree</h1>
+  <p class="site-subtitle" id="site-subtitle" contenteditable="false" spellcheck="false">Four generations, one root.</p>
 
   <div class="toolbar" id="admin-toolbar" hidden>
     <button id="edit-toggle" class="btn btn-ghost">Edit Tree</button>
@@ -37,21 +37,34 @@
 
 <footer class="site-footer">
   <div class="flourish" aria-hidden="true">&#9670;</div>
-  <p>Click any portrait to view it in full size.</p>
+  <p>Click any portrait to view that person's photos. Our shared family album is further down the page.</p>
   <button id="admin-link" class="admin-link">Site Admin</button>
 </footer>
 
-<!-- Lightbox -->
+<!-- Lightbox (supports multiple photos, with Prev/Next) -->
 <div id="lightbox" class="lightbox" hidden>
   <button id="lightbox-close" class="lightbox-close" aria-label="Close">&times;</button>
+  <button id="lightbox-prev" class="lightbox-nav lightbox-prev" aria-label="Previous photo" hidden>&#8249;</button>
+  <button id="lightbox-next" class="lightbox-nav lightbox-next" aria-label="Next photo" hidden>&#8250;</button>
   <figure class="lightbox-figure">
     <img id="lightbox-img" src="" alt="">
     <figcaption id="lightbox-caption"></figcaption>
   </figure>
 </div>
 
-<!-- Hidden file input reused for photo uploads -->
-<input type="file" id="photo-file" accept="image/*" hidden>
+<!-- Photo Manager (edit mode only) -->
+<div id="photo-manager" class="lightbox photo-manager" hidden>
+  <button id="photo-manager-close" class="lightbox-close" aria-label="Close">&times;</button>
+  <div class="photo-manager-panel">
+    <h2 id="photo-manager-title" class="photo-manager-title"></h2>
+    <div id="photo-manager-grid" class="photo-manager-grid"></div>
+    <button id="photo-manager-add" class="btn btn-ghost small">+ Add Photos</button>
+  </div>
+</div>
+
+<!-- Hidden file inputs -->
+<input type="file" id="photo-file" accept="image/*" multiple hidden>
+<input type="file" id="family-photo-file" accept="image/*" multiple hidden>
 
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
