@@ -200,7 +200,7 @@ button{ font-family: inherit; }
   margin: 1.6rem auto 0;
 }
 
-/* --- Level sections (Children / Grandchildren) --- */
+/* --- Level sections (Family Photos, etc.) --- */
 .level-section{
   margin-bottom: 3.4rem;
 }
@@ -210,51 +210,47 @@ button{ font-family: inherit; }
   border-top: 1px solid var(--gold);
 }
 
-/* Level 2: children, one clean row */
-.children-level{
+/* --- Children & Grandchildren, as one vertical list of family
+   branches: each parent, with their own children in a horizontal
+   row directly beneath them, then the next parent below that. --- */
+.family-branches{
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2.2rem 1.8rem;
+  flex-direction: column;
+  gap: 2.8rem;
 }
 
-.child-cell{
-  width: 150px;
+.family-branch{
+  padding-bottom: 2.4rem;
+  border-bottom: 1px solid var(--line);
 }
 
-/* Level 3: grandchildren, grouped into clusters so it's clear whose
-   child each one is, while still all sitting on one tier */
-.grandchildren-level{
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2.4rem 3rem;
+.family-branch:last-child{
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
-.gc-cluster{
+.branch-parent-row{
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 140px;
-  max-width: 260px;
-  padding: 0 .4rem;
+  margin-bottom: 1.2rem;
 }
 
-.gc-cluster-label{
-  margin: 0 0 1rem;
+.branch-kids-label{
+  text-align: center;
   font-size: .68rem;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--purple);
   opacity: .8;
-  text-align: center;
+  margin: 0 0 1rem;
 }
 
-.gc-cluster-row{
+.branch-kids-row{
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1.1rem 1rem;
+  gap: 1.4rem 1.2rem;
 }
 
 /* ============================================================
@@ -463,6 +459,140 @@ body.edit-mode .add-child-branch{ display: flex; }
   cursor: pointer;
 }
 
+.lightbox-nav{
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: 1px solid rgba(255,255,255,.4);
+  color: var(--white);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.lightbox-nav:hover{ background: rgba(255,255,255,.15); }
+
+.lightbox-prev{ left: 1.5rem; }
+.lightbox-next{ right: 1.5rem; }
+
+/* ============================================================
+   PHOTO MANAGER (edit mode only)
+   ============================================================ */
+.photo-manager-panel{
+  background: var(--white);
+  color: var(--ink);
+  max-width: min(90vw, 560px);
+  width: 100%;
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.photo-manager-title{
+  margin: 0 0 1.6rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+}
+
+.photo-manager-empty{
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-bottom: 1.6rem;
+}
+
+.photo-manager-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 1.4rem;
+  margin-bottom: 1.8rem;
+}
+
+.photo-manager-cell{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .4rem;
+}
+
+.photo-manager-thumb{
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
+.cover-badge{
+  font-size: .62rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+
+.manager-btn{
+  font-size: .68rem;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  color: var(--purple);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.manager-btn.danger{ color: var(--danger); }
+
+/* ============================================================
+   FAMILY PHOTOS (shared album)
+   ============================================================ */
+.family-photos-empty{
+  text-align: center;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin-bottom: 1.6rem;
+}
+
+.family-photos-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.8rem;
+}
+
+.family-photo-cell{
+  text-align: center;
+}
+
+.family-photo-thumb{
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  cursor: zoom-in;
+  transition: box-shadow .2s ease;
+}
+
+.family-photo-thumb:hover{ box-shadow: 0 0 0 4px var(--gold-tint); }
+
+.family-photo-caption{
+  margin: .7rem 0 0;
+  font-size: .9rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.family-photo-caption[contenteditable="true"]{
+  cursor: text;
+  border-bottom: 1px dashed var(--gold);
+  padding-bottom: 1px;
+}
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */
@@ -470,24 +600,49 @@ body.edit-mode .add-child-branch{ display: flex; }
   .site-header{ padding: 3rem 1.2rem 2.2rem; }
   .tree-root{ padding: 2.4rem 1rem 3.5rem; }
 
-  .children-level,
-  .grandchildren-level{
-    gap: 1.8rem;
+  .family-branches{ gap: 2.2rem; }
+  .family-branch{ padding-bottom: 1.8rem; }
+
+  /* Each parent's own children stay in a single horizontal,
+     swipeable row rather than wrapping into a vertical stack —
+     the page as a whole still scrolls vertically from parent to
+     parent. */
+  .branch-kids-row{
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    gap: 1.2rem;
+    padding: .25rem .25rem .6rem;
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
-  .child-cell{ width: 130px; }
-
-  .gc-cluster{
-    width: 100%;
-    max-width: none;
-    padding: 1.2rem 0;
-    border-top: 1px solid var(--line);
+  .branch-kids-row .person--grandchild{
+    flex: 0 0 auto;
+    width: 92px;
+    scroll-snap-align: start;
   }
-
-  .gc-cluster:first-child{ border-top: none; padding-top: 0; }
 
   .person--primary .portrait,
   .person--primary .portrait-initials{ width: 108px; height: 108px; }
+
+  .lightbox-nav{
+    width: 38px;
+    height: 38px;
+    font-size: 1.3rem;
+  }
+  .lightbox-prev{ left: .5rem; }
+  .lightbox-next{ right: .5rem; }
+
+  .photo-manager-panel{ padding: 1.4rem; }
+
+  .family-photos-grid{
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 1.2rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce){
