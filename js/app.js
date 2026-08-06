@@ -8,18 +8,57 @@ let data = loadData();
 let meta = loadMeta();
 let editMode = false;
 
-// Tracks which person the currently-open file picker should apply to.
-let pendingPhotoTarget = null;
+// Which person's photos the Photo Manager modal is currently showing.
+let managedPerson = null;
+
+// Current lightbox gallery state.
+let lightboxImages = [];
+let lightboxIndex = 0;
+let lightboxCaptionBase = "";
 
 /* ============================================================
    PERSISTENCE
    ============================================================ */
 function loadData() {
+  let d;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (e) { /* fall through to default */ }
-  return structuredClone(DEFAULT_DATA);
+    d = raw ? JSON.parse(raw) : structuredClone(DEFAULT_DATA);
+  } catch (e) {
+    d = structuredClone(DEFAULT_DATA);
+  }
+  migrateData(d);
+  return d;
+}
+
+// Upgrades older saved data (a single "image" string per person) to the
+// current format (an "images" array), and makes sure familyPhotos exists.
+// Safe to run on already-current data — it just does nothing extra.
+function migrateData(d) {
+  const fixPerson = (p) => {
+    if (!p) return;
+    if (!Array.isArray(p.images)) {
+      p.images = p.image ? [p.image] : [];
+    }
+    delete p.image;
+  };
+  if (d.grandparents) {
+    fixPerson(d.grandparents.father);
+    fixPerson(d.grandparents.mother);
+  }
+  if (Array.isArray(d.children)) {
+    d.children.forEach(child => {
+      fixPerson(child);
+      if (Array.isArray(child.children)) {
+        child.children.forEach(fixPerson);
+      } else {
+        child.children = [];
+      }
+    });
+  } else {
+    d.children = [];
+  }
+  if (!Array.isArray(d.familyPhotos)) d.familyPhotos = [];
 }
 
 function loadMeta() {
@@ -27,7 +66,7 @@ function loadMeta() {
     const raw = localStorage.getItem(META_KEY);
     if (raw) return JSON.parse(raw);
   } catch (e) { /* ignore */ }
-  return { title: "John Wamutu (Kahungura) Family Tree", subtitle: "Family" };
+  return { title: "The Family Tree", subtitle: "Four generations, one root." };
 }
 
 function saveData() {
@@ -52,21 +91,6 @@ function uid(prefix) {
   return prefix + "-" + Math.random().toString(36).slice(2, 9);
 }
 
-function findPersonById(id) {
-  if (data.grandparents.father.id === id) return data.grandparents.father;
-  if (data.grandparents.mother.id === id) return data.grandparents.mother;
-  for (const child of data.children) {
-    if (child.id === id) return child;
-    for (const gc of child.children) {
-      if (gc.id === id) return gc;
-    }
-  }
-  return null;
-}
-
-/* ============================================================
-   RENDER
-   ============================================================ */
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -74,11 +98,47 @@ function el(tag, className, text) {
   return node;
 }
 
+/* ============================================================
+   IMAGE RESIZING (shared by person photos and family album photos)
+   ============================================================ */
+const MAX_DIMENSION = 640;
+const JPEG_QUALITY = 0.85;
+
+function resizeImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let { width, height } = img;
+        if (width > height && width > MAX_DIMENSION) {
+          height = Math.round(height * (MAX_DIMENSION / width));
+          width = MAX_DIMENSION;
+        } else if (height > MAX_DIMENSION) {
+          width = Math.round(width * (MAX_DIMENSION / height));
+          height = MAX_DIMENSION;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", JPEG_QUALITY));
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ============================================================
+   PERSON RENDERING
+   ============================================================ */
 function renderPortrait(person, sizeClass) {
   const wrap = el("div", "portrait-wrap");
-  if (person.image) {
+  const cover = person.images && person.images.length > 0 ? person.images[0] : null;
+  if (cover) {
     const img = el("img", `portrait ${sizeClass}`);
-    img.src = person.image;
+    img.src = cover;
     img.alt = person.name || "Family member";
     img.addEventListener("click", () => handlePortraitClick(person));
     wrap.appendChild(img);
@@ -92,10 +152,9 @@ function renderPortrait(person, sizeClass) {
 
 function handlePortraitClick(person) {
   if (editMode) {
-    pendingPhotoTarget = person;
-    document.getElementById("photo-file").click();
-  } else {
-    openLightbox(person);
+    openPhotoManager(person);
+  } else if (person.images && person.images.length > 0) {
+    openLightboxGallery(person.images, 0, person.name || "");
   }
 }
 
@@ -120,7 +179,7 @@ function renderPerson(person, tierClass, sizeClass, showEditTag) {
   wrap.appendChild(renderPortrait(person, sizeClass));
   wrap.appendChild(renderName(person));
   if (showEditTag) {
-    wrap.appendChild(el("span", "edit-mode-tag", "click photo to replace"));
+    wrap.appendChild(el("span", "edit-mode-tag", "click photo to add/manage photos"));
   }
   return wrap;
 }
@@ -156,16 +215,19 @@ function renderGrandchild(gc, parentChild) {
   return wrap;
 }
 
-/* Level 2: the ten children, all on one row, on their own — no
-   grandchildren mixed in, so this level reads as a single clear tier. */
-function renderChildrenLevel() {
+/* Children & Grandchildren, together: a vertical list of family
+   branches — each parent, with their own children in a horizontal
+   row directly beneath them, then the next parent below that. */
+function renderFamilyBranches() {
   const section = el("section", "level-section");
-  section.appendChild(el("p", "generation-label", "Children"));
+  section.appendChild(el("p", "generation-label", "Children & Grandchildren"));
 
-  const row = el("div", "children-level");
+  const list = el("div", "family-branches");
   data.children.forEach(child => {
-    const cell = el("div", "child-cell");
-    cell.appendChild(renderPerson(child, "person--child", "", true));
+    const block = el("div", "family-branch");
+
+    const parentRow = el("div", "branch-parent-row");
+    parentRow.appendChild(renderPerson(child, "person--child", "", true));
     const removeChildBtn = el("button", "remove-btn", "Remove this child & their family");
     removeChildBtn.addEventListener("click", () => {
       if (!confirm(`Remove ${child.name || "this person"} and all of their children from the tree?`)) return;
@@ -173,15 +235,33 @@ function renderChildrenLevel() {
       saveData();
       render();
     });
-    cell.appendChild(removeChildBtn);
-    row.appendChild(cell);
+    parentRow.appendChild(removeChildBtn);
+    block.appendChild(parentRow);
+
+    if (child.children.length > 0 || editMode) {
+      block.appendChild(el("p", "branch-kids-label", "Children"));
+    }
+
+    const kidsRow = el("div", "branch-kids-row");
+    child.children.forEach(gc => kidsRow.appendChild(renderGrandchild(gc, child)));
+    block.appendChild(kidsRow);
+
+    const addGcBtn = el("button", "add-person-btn", "+ Add child");
+    addGcBtn.addEventListener("click", () => {
+      child.children.push({ id: uid("p"), name: "New Family Member", images: [] });
+      saveData();
+      render();
+    });
+    block.appendChild(addGcBtn);
+
+    list.appendChild(block);
   });
-  section.appendChild(row);
+  section.appendChild(list);
 
   const addWrap = el("div", "add-child-branch");
   const addChildBtn = el("button", "btn btn-ghost small", "+ Add another child");
   addChildBtn.addEventListener("click", () => {
-    data.children.push({ id: uid("p"), name: "New Family Member", image: null, children: [] });
+    data.children.push({ id: uid("p"), name: "New Family Member", images: [], children: [] });
     saveData();
     render();
   });
@@ -191,45 +271,89 @@ function renderChildrenLevel() {
   return section;
 }
 
-/* Level 3: every grandchild, grouped in clusters so it's clear at a
-   glance whose child each one is, but all sitting on the one tier
-   below the children — never mixed into the level above. */
-function renderGrandchildrenLevel() {
-  const section = el("section", "level-section");
-  section.appendChild(el("p", "generation-label", "Grandchildren"));
+/* ============================================================
+   FAMILY PHOTOS (shared album, not tied to one person)
+   ============================================================ */
+function renderFamilyPhotosSection() {
+  if (data.familyPhotos.length === 0 && !editMode) return null;
 
-  const row = el("div", "grandchildren-level");
-  data.children.forEach(child => {
-    if (child.children.length === 0 && !editMode) return;
+  const section = el("section", "level-section family-photos-section");
+  section.appendChild(el("p", "generation-label", "Family Photos"));
 
-    const cluster = el("div", "gc-cluster");
-    cluster.appendChild(el("p", "gc-cluster-label", `${child.name}\u2019s children`));
+  if (data.familyPhotos.length === 0) {
+    section.appendChild(el("p", "family-photos-empty", "No photos yet — add some below."));
+  }
 
-    const clusterRow = el("div", "gc-cluster-row");
-    child.children.forEach(gc => clusterRow.appendChild(renderGrandchild(gc, child)));
-    cluster.appendChild(clusterRow);
+  const grid = el("div", "family-photos-grid");
+  data.familyPhotos.forEach((photo, idx) => {
+    const cell = el("div", "family-photo-cell");
 
-    const addGcBtn = el("button", "add-person-btn", "+ Add child");
-    addGcBtn.addEventListener("click", () => {
-      child.children.push({ id: uid("p"), name: "New Family Member", image: null });
+    const img = el("img", "family-photo-thumb");
+    img.src = photo.image;
+    img.alt = photo.caption || "Family photo";
+    img.addEventListener("click", () => {
+      openLightboxGallery(data.familyPhotos.map(p => p.image), idx, "Family Photos");
+    });
+    cell.appendChild(img);
+
+    const caption = el("p", "family-photo-caption", photo.caption || (editMode ? "Add a caption\u2026" : ""));
+    caption.setAttribute("contenteditable", editMode ? "true" : "false");
+    caption.spellcheck = false;
+    caption.addEventListener("blur", () => {
+      photo.caption = caption.textContent.trim();
+      caption.textContent = photo.caption || (editMode ? "Add a caption\u2026" : "");
+      saveData();
+    });
+    caption.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); caption.blur(); }
+    });
+    cell.appendChild(caption);
+
+    const removeBtn = el("button", "remove-btn", "Remove");
+    removeBtn.addEventListener("click", () => {
+      if (!confirm("Remove this photo from the family album?")) return;
+      data.familyPhotos = data.familyPhotos.filter(p => p.id !== photo.id);
       saveData();
       render();
     });
-    cluster.appendChild(addGcBtn);
+    cell.appendChild(removeBtn);
 
-    row.appendChild(cluster);
+    grid.appendChild(cell);
   });
-  section.appendChild(row);
+  section.appendChild(grid);
+
+  const addWrap = el("div", "add-child-branch");
+  const addBtn = el("button", "btn btn-ghost small", "+ Add Photos");
+  addBtn.addEventListener("click", () => document.getElementById("family-photo-file").click());
+  addWrap.appendChild(addBtn);
+  section.appendChild(addWrap);
 
   return section;
 }
 
+document.getElementById("family-photo-file").addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files);
+  e.target.value = "";
+  if (!files.length) return;
+  for (const file of files) {
+    const dataUrl = await resizeImageFile(file);
+    data.familyPhotos.push({ id: uid("fp"), image: dataUrl, caption: "" });
+  }
+  saveData();
+  render();
+});
+
+/* ============================================================
+   RENDER (main tree + album)
+   ============================================================ */
 function render() {
   const root = document.getElementById("tree-root");
   root.innerHTML = "";
   root.appendChild(renderGrandparents());
-  root.appendChild(renderChildrenLevel());
-  root.appendChild(renderGrandchildrenLevel());
+  root.appendChild(renderFamilyBranches());
+
+  const familySection = renderFamilyPhotosSection();
+  if (familySection) root.appendChild(familySection);
 
   document.body.classList.toggle("edit-mode", editMode);
 
@@ -256,64 +380,132 @@ document.getElementById("site-subtitle").addEventListener("blur", (e) => {
 });
 
 /* ============================================================
-   LIGHTBOX
+   LIGHTBOX (view-only, supports multiple photos with Prev/Next)
    ============================================================ */
-function openLightbox(person) {
-  if (!person.image) return; // nothing to enlarge for initials placeholders
-  const lightbox = document.getElementById("lightbox");
-  document.getElementById("lightbox-img").src = person.image;
-  document.getElementById("lightbox-caption").textContent = person.name || "";
-  lightbox.hidden = false;
+function openLightboxGallery(images, startIndex, captionBase) {
+  if (!images || images.length === 0) return;
+  lightboxImages = images;
+  lightboxIndex = startIndex;
+  lightboxCaptionBase = captionBase || "";
+  renderLightboxFrame();
+  document.getElementById("lightbox").hidden = false;
+}
+
+function renderLightboxFrame() {
+  document.getElementById("lightbox-img").src = lightboxImages[lightboxIndex];
+  const multi = lightboxImages.length > 1;
+  const captionEl = document.getElementById("lightbox-caption");
+  captionEl.textContent = multi
+    ? `${lightboxCaptionBase}${lightboxCaptionBase ? " \u2014 " : ""}${lightboxIndex + 1} of ${lightboxImages.length}`
+    : lightboxCaptionBase;
+  document.getElementById("lightbox-prev").hidden = !multi;
+  document.getElementById("lightbox-next").hidden = !multi;
+}
+
+function lightboxStep(delta) {
+  if (lightboxImages.length === 0) return;
+  lightboxIndex = (lightboxIndex + delta + lightboxImages.length) % lightboxImages.length;
+  renderLightboxFrame();
 }
 
 function closeLightbox() {
   document.getElementById("lightbox").hidden = true;
   document.getElementById("lightbox-img").src = "";
+  lightboxImages = [];
+  lightboxIndex = 0;
 }
 
 document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+document.getElementById("lightbox-prev").addEventListener("click", () => lightboxStep(-1));
+document.getElementById("lightbox-next").addEventListener("click", () => lightboxStep(1));
 document.getElementById("lightbox").addEventListener("click", (e) => {
   if (e.target.id === "lightbox") closeLightbox();
 });
 document.addEventListener("keydown", (e) => {
+  const lb = document.getElementById("lightbox");
+  if (lb.hidden) return;
   if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowLeft") lightboxStep(-1);
+  if (e.key === "ArrowRight") lightboxStep(1);
 });
 
 /* ============================================================
-   PHOTO UPLOAD (resized client-side, stored as a data URL)
+   PHOTO MANAGER (edit mode only — add/remove/reorder a person's photos)
    ============================================================ */
-const MAX_DIMENSION = 640;
-const JPEG_QUALITY = 0.85;
+function openPhotoManager(person) {
+  managedPerson = person;
+  document.getElementById("photo-manager-title").textContent = `Manage Photos \u2014 ${person.name || "Unnamed"}`;
+  renderPhotoManagerGrid();
+  document.getElementById("photo-manager").hidden = false;
+}
 
-document.getElementById("photo-file").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  e.target.value = ""; // reset so the same file can be chosen again later
-  if (!file || !pendingPhotoTarget) return;
+function closePhotoManager() {
+  document.getElementById("photo-manager").hidden = true;
+  managedPerson = null;
+}
 
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      let { width, height } = img;
-      if (width > height && width > MAX_DIMENSION) {
-        height = Math.round(height * (MAX_DIMENSION / width));
-        width = MAX_DIMENSION;
-      } else if (height > MAX_DIMENSION) {
-        width = Math.round(width * (MAX_DIMENSION / height));
-        height = MAX_DIMENSION;
-      }
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-      pendingPhotoTarget.image = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
-      pendingPhotoTarget = null;
+function renderPhotoManagerGrid() {
+  const grid = document.getElementById("photo-manager-grid");
+  grid.innerHTML = "";
+  if (!managedPerson) return;
+
+  if (managedPerson.images.length === 0) {
+    grid.appendChild(el("p", "photo-manager-empty", "No photos yet \u2014 add one below."));
+  }
+
+  managedPerson.images.forEach((src, idx) => {
+    const cell = el("div", "photo-manager-cell");
+    const img = el("img", "photo-manager-thumb");
+    img.src = src;
+    img.alt = "";
+    cell.appendChild(img);
+
+    if (idx === 0) {
+      cell.appendChild(el("span", "cover-badge", "Cover photo"));
+    } else {
+      const coverBtn = el("button", "manager-btn", "Make cover");
+      coverBtn.addEventListener("click", () => {
+        managedPerson.images.splice(idx, 1);
+        managedPerson.images.unshift(src);
+        saveData();
+        renderPhotoManagerGrid();
+        render();
+      });
+      cell.appendChild(coverBtn);
+    }
+
+    const removeBtn = el("button", "manager-btn danger", "Remove");
+    removeBtn.addEventListener("click", () => {
+      if (!confirm("Remove this photo?")) return;
+      managedPerson.images.splice(idx, 1);
       saveData();
+      renderPhotoManagerGrid();
       render();
-    };
-    img.src = evt.target.result;
-  };
-  reader.readAsDataURL(file);
+    });
+    cell.appendChild(removeBtn);
+
+    grid.appendChild(cell);
+  });
+}
+
+document.getElementById("photo-manager-close").addEventListener("click", closePhotoManager);
+document.getElementById("photo-manager").addEventListener("click", (e) => {
+  if (e.target.id === "photo-manager") closePhotoManager();
+});
+document.getElementById("photo-manager-add").addEventListener("click", () => {
+  document.getElementById("photo-file").click();
+});
+document.getElementById("photo-file").addEventListener("change", async (e) => {
+  const files = Array.from(e.target.files);
+  e.target.value = "";
+  if (!files.length || !managedPerson) return;
+  for (const file of files) {
+    const dataUrl = await resizeImageFile(file);
+    managedPerson.images.push(dataUrl);
+  }
+  saveData();
+  renderPhotoManagerGrid();
+  render();
 });
 
 /* ============================================================
@@ -433,6 +625,7 @@ document.getElementById("import-file").addEventListener("change", (e) => {
         throw new Error("File does not look like a family tree export.");
       }
       data = payload.data;
+      migrateData(data);
       meta = payload.meta || meta;
       saveData();
       saveMeta();
